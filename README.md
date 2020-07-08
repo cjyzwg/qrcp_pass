@@ -15,5 +15,5 @@
 
 - ***使用场景***
 
-    解决局域网iPhone、iOS、安卓、win7 mac胯平台共享文件
+    解决局域网iPhone、iOS、安卓、win7 mac跨平台共享文件
 

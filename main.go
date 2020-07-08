@@ -119,16 +119,7 @@ func main() {
 		http.ServeFile(w, r, app.Payload.Path)
 
 	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
-		fmt.Println("222")
-		f, err := qrcode.Encode(sendurl, qrcode.Highest, 300)
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-		w.Write(f)
-	})
+	http.HandleFunc("/", tmpl)
 	//wait for all wait done
 	go func() {
 		waitgroup.Wait()
@@ -181,6 +172,16 @@ func main() {
 		log.Fatalln("error is :", xerr)
 	}
 
+}
+
+func tmpl(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("222")
+	f, err := qrcode.Encode(sendurl, qrcode.Highest, 300)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+	w.Write(f)
 }
 
 // 打开系统默认浏览器

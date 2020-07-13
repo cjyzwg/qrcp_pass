@@ -83,9 +83,11 @@ func main() {
 	newaddr := ip + ":" + port
 	log.Println("Current ip+port is:", newaddr)
 	sendurl := "http://" + newaddr + "/send/sea/"
+	receiveurl := "http://" + newaddr + "/upload"
 	urlparms := &server.Urlparms{
-		Sendip:  ip,
-		Sendurl: sendurl,
+		Sendip:     ip,
+		Sendurl:    sendurl,
+		Receiveurl: receiveurl,
 	}
 	var waitgroup sync.WaitGroup
 	waitgroup.Add(1)
@@ -134,8 +136,12 @@ func main() {
 	http.HandleFunc("/", urlparms.IndexTmpl)
 	//qrcode
 	http.HandleFunc("/qrcode", urlparms.QrcodeTmpl)
+	//upload
+	http.HandleFunc("/upload", urlparms.UploadTmpl)
 	//api sip get ip string
 	http.HandleFunc("/api/sip", urlparms.OnSip)
+	//layui demo
+	http.HandleFunc("/homelay", urlparms.LayDemoTmpl)
 
 	//wait for all wait done
 	go func() {

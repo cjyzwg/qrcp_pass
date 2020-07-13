@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -21,12 +20,10 @@
 	<div class="logo">
 		<a href="/"><b>手机传输</b></a>
     </div>
-    <ul class="layui-nav right" lay-filter="">
-        <li class="layui-nav-item">
-            <a href="/" target="iframe">
-                <i class="iconfont">&#xe6ec;</i>浏览器打开</a>
-            </a>
-        </li>
+	<ul class="layui-nav right" lay-filter="">
+		<li class="layui-nav-item">
+		<a href="/"><i class="layui-icon">&#xe64c;</i>浏览器打开</a>
+		</li>
 	</ul>
 
 </div>
@@ -39,14 +36,18 @@
 		<div class="home-sub-menu">
 		<ul class="layui-nav layui-bg-orange" lay-filter="">
 			<li class="layui-nav-item">
-                <a href="/file-lists" target="iframe">
-                    <i class="iconfont">&#xe6ec;</i>上传文件</a>
-                </a>
-            </li>
-            <li class="layui-nav-item">
-				<a onclick="x_admin_open('手机扫码','/qrcode', 250, 320)">
+				<a onclick="x_admin_open('手机扫码','/qrcode?path=download', 250, 320)">
 					<i class="iconfont">&#xe6ec;</i>下载文件</a>
 			</li>
+			<li class="layui-nav-item">
+                <!-- <a href="/upload" target="iframe">
+					<i class="iconfont">&#xe6ec;</i>上传文件
+				</a> -->
+				<a onclick="x_admin_open('手机扫码','/qrcode?path=upload', 250, 320)">
+					<i class="layui-icon">&#xe655;</i>上传文件
+				</a>
+			</li>
+
 		</ul>
 		</div>
 	</div>

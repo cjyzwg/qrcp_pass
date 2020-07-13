@@ -28,8 +28,9 @@ type Server struct {
 
 //Urlparms is a struct
 type Urlparms struct {
-	Sendip  string
-	Sendurl string
+	Sendip     string
+	Sendurl    string
+	Receiveurl string
 }
 
 // Send adds a handler for sending the file
@@ -107,7 +108,7 @@ func (s *Server) ExecUI() {
 
 //IndexTmpl is a function
 func (url *Urlparms) IndexTmpl(w http.ResponseWriter, r *http.Request) {
-	t1, err := template.ParseFiles("template/test.html")
+	t1, err := template.ParseFiles("template/index.html")
 	if err != nil {
 		panic(err)
 	}
@@ -139,11 +140,36 @@ func (url *Urlparms) QrcodeTmpl(w http.ResponseWriter, r *http.Request) {
 	// w.Write(f)
 }
 
+//UploadTmpl is a function
+func (url *Urlparms) UploadTmpl(w http.ResponseWriter, r *http.Request) {
+	t1, err := template.ParseFiles("template/page/upload.html")
+	if err != nil {
+		panic(err)
+	}
+	t1.Execute(w, nil)
+}
+
+//LayDemoTmpl is a function
+func (url *Urlparms) LayDemoTmpl(w http.ResponseWriter, r *http.Request) {
+	t1, err := template.ParseFiles("template/page/laydemo.html")
+	if err != nil {
+		panic(err)
+	}
+	t1.Execute(w, nil)
+}
+
 //OnSip is a function
 func (url *Urlparms) OnSip(res http.ResponseWriter, req *http.Request) {
-
+	query := req.URL.Query()
+	// log.Println("query", query)
+	path := query["path"][0]
+	// log.Println("path", path)
 	ipmap := make(map[string]string)
-	ipmap["ip"] = url.Sendurl
+	if path == "download" {
+		ipmap["ip"] = url.Sendurl
+	} else {
+		ipmap["ip"] = url.Receiveurl
+	}
 	jsonips, _ := json.Marshal(ipmap)
 	//返回的这个是给json用的，需要去掉
 	res.Header().Set("Content-Length", strconv.Itoa(len(jsonips)))

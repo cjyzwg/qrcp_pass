@@ -21,7 +21,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/skip2/go-qrcode"
 	"github.com/zserge/lorca"
 )
 
@@ -55,16 +54,15 @@ func main() {
 	log.Println("Port is:", xport)
 	app := &server.Server{}
 	// ip, _ := GetLocalIP()
-	ips, iperr := util.Ips()
+	ip, iperr := util.GetIp()
 	if iperr != nil {
 		panic(iperr)
 	}
-	if len(ips) == 0 {
+	if ip == "" {
 		fmt.Println("没有发现ip，请先连接网络再尝试")
 		return
 	}
-	ip := ips[0]
-	log.Println("Current ip is:", ip)
+
 	app.Port = xport
 	//优雅关闭
 	app.Stopchannel = make(chan bool)
@@ -83,7 +81,12 @@ func main() {
 	}
 	port := xport
 	newaddr := ip + ":" + port
+	log.Println("Current ip+port is:", newaddr)
 	sendurl := "http://" + newaddr + "/send/sea/"
+	urlparms := &server.Urlparms{
+		Sendip:  ip,
+		Sendurl: sendurl,
+	}
 	var waitgroup sync.WaitGroup
 	waitgroup.Add(1)
 	var initCookie sync.Once
@@ -119,7 +122,21 @@ func main() {
 		http.ServeFile(w, r, app.Payload.Path)
 
 	})
-	http.HandleFunc("/", tmpl)
+	//later change it to be self router
+	//load js,css static resources
+	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("public/assets/css/"))))
+	http.Handle("/static/js/", http.StripPrefix("/static/js/", http.FileServer(http.Dir("public/js/"))))
+	http.Handle("/static/js/libs/", http.StripPrefix("/static/js/libs/", http.FileServer(http.Dir("public/js/libs/"))))
+	http.Handle("/static/images/", http.StripPrefix("/static/images/", http.FileServer(http.Dir("public/assets/images/"))))
+	http.Handle("/static/fonts/", http.StripPrefix("/static/fonts/", http.FileServer(http.Dir("public/assets/fonts/"))))
+
+	//wait for index page
+	http.HandleFunc("/", urlparms.IndexTmpl)
+	//qrcode
+	http.HandleFunc("/qrcode", urlparms.QrcodeTmpl)
+	//api sip get ip string
+	http.HandleFunc("/api/sip", urlparms.OnSip)
+
 	//wait for all wait done
 	go func() {
 		waitgroup.Wait()
@@ -172,16 +189,6 @@ func main() {
 		log.Fatalln("error is :", xerr)
 	}
 
-}
-
-func tmpl(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("222")
-	f, err := qrcode.Encode(sendurl, qrcode.Highest, 300)
-	if err != nil {
-		log.Println(err.Error())
-		return
-	}
-	w.Write(f)
 }
 
 // 打开系统默认浏览器

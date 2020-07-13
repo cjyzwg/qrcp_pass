@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"net"
 	"regexp"
 )
@@ -80,14 +81,16 @@ func GetIfaceIps() (map[string]string, error) {
 	return ips, nil
 }
 
-// func main() {
-// 	ips, err := Ips()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	if len(ips) == 0 {
-// 		fmt.Println("没有发现ip，请先连接网络再尝试")
-// 		return
-// 	}
-// 	fmt.Println(ips[0])
-// }
+//GetIp is a function
+func GetIp() (localip string, err error) {
+	ips, err := Ips()
+	if err != nil {
+		panic(err)
+	}
+	if len(ips) == 0 {
+		fmt.Println("没有发现ip，请先连接网络再尝试")
+		return "", err
+	}
+	initlocalip := ips[0]
+	return initlocalip, err
+}

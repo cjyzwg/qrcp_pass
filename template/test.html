@@ -1,10 +1,71 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <title>Go Web</title>
-    </head>
-    <body>
-        {{ . }}
-    </body>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<title>qrcp_pass</title>
+	<meta name="renderer" content="webkit">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<meta name="renderer" content="webkit|ie-comp|ie-stand" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="format-detection" content="telephone=no">
+	<link rel="icon" href="favicon.ico">
+	<link rel="stylesheet" href="/static/css/main.css?02">
+</head>
+
+<body>
+<!-- 顶部开始 -->
+<div class="container">
+	<div class="logo">
+		<a href="/"><b>手机传输</b></a>
+    </div>
+    <ul class="layui-nav right" lay-filter="">
+        <li class="layui-nav-item">
+            <a href="/" target="iframe">
+                <i class="iconfont">&#xe6ec;</i>浏览器打开</a>
+            </a>
+        </li>
+	</ul>
+
+</div>
+<!-- 顶部结束 -->
+<!-- 中部开始 -->
+
+<!-- 右侧主体开始 -->
+<div class="page-content">
+	<div class="layui-tab tab" lay-filter="xbs_tab" lay-allowclose="false">
+		<div class="home-sub-menu">
+		<ul class="layui-nav layui-bg-orange" lay-filter="">
+			<li class="layui-nav-item">
+                <a href="/file-lists" target="iframe">
+                    <i class="iconfont">&#xe6ec;</i>上传文件</a>
+                </a>
+            </li>
+            <li class="layui-nav-item">
+				<a onclick="x_admin_open('手机扫码','/qrcode', 250, 320)">
+					<i class="iconfont">&#xe6ec;</i>下载文件</a>
+			</li>
+		</ul>
+		</div>
+	</div>
+</div>
+<div class="page-content-bg"></div>
+<!-- 右侧主体结束 -->
+<!-- 中部结束 -->
+<!-- 底部开始 -->
+<div class="footer">
+	<div class="copyright">
+		借鉴qrcp和b0pass v0.0.1
+		<a href="https://github.com/cjyzwg/qrcp_pass" target="_blank">
+			GitHub
+		</a>
+	</div>
+</div>
+<!-- 底部结束 -->
+</body>
+<script type="text/javascript" src="/static/js/libs/jquery.min.js"></script>
+<script type="text/javascript" src="/static/js/libs/layui/layui.js"></script>
+<script type="text/javascript" src="/static/js/main.js"></script>
 </html>

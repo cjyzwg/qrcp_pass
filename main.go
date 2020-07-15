@@ -49,14 +49,16 @@ import (
 // var xport = "21346"
 
 func main() {
-	var send bool
+
 	ars := os.Args[1:]
-	if len(ars) == 0 {
-		ars = append(ars, "xxx")
-		send = true
-	} else {
-		send = false
-	}
+
+	// var send bool
+	// if len(ars) == 0 {
+	// 	ars = append(ars, "xxx")
+	// 	send = true
+	// } else {
+	// 	send = false
+	// }
 	payload, _ := payload.FromArgs(ars)
 
 	// log.Println(payload)
@@ -286,10 +288,10 @@ func main() {
 	app.Instance = httpserver
 
 	// qr.RenderString(sendurl)
-	if send {
-		app.Send(payload)
-	}
+	// if send {
 
+	// }
+	app.Send(payload)
 	xerr := app.Wait()
 	if xerr != nil {
 		log.Fatalln("error is :", xerr)

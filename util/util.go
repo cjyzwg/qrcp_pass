@@ -2,8 +2,11 @@ package util
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 //Ips 得到网卡名加ip
@@ -93,4 +96,38 @@ func GetIp() (localip string, err error) {
 	}
 	initlocalip := ips[0]
 	return initlocalip, err
+}
+
+//ReadFilenames from dir
+func ReadFilenames(dir string) []string {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+	// Create array of names of files which are stored in dir
+	// used later to set valid name for received files
+	filenames := make([]string, len(files))
+	for _, fi := range files {
+		filenames = append(filenames, fi.Name())
+	}
+	return filenames
+}
+
+// GetFileName generates a file name based on the existing files in the directory
+// if name isn't taken leave it unchanged
+// else change name to format "name(number).ext"
+func GetFileName(newFilename string, fileNamesInTargetDir []string) string {
+	fileExt := filepath.Ext(newFilename)
+	fileName := strings.TrimSuffix(newFilename, fileExt)
+	number := 1
+	i := 0
+	for i < len(fileNamesInTargetDir) {
+		if newFilename == fileNamesInTargetDir[i] {
+			newFilename = fmt.Sprintf("%s(%v)%s", fileName, number, fileExt)
+			number++
+			i = 0
+		}
+		i++
+	}
+	return newFilename
 }

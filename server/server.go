@@ -97,7 +97,7 @@ func (s *Server) ExecUI() {
 	// case <-sigc:
 	// case <-ui.Done():
 	// }
-	fmt.Println(s.Uistopchannel)
+	// fmt.Println(s.Uistopchannel)
 	select {
 	case <-s.Uistopchannel:
 	case <-ui.Done():

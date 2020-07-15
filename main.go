@@ -3,16 +3,19 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"math"
 	"math/big"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"qrcp_pass/payload"
 	"qrcp_pass/server"
 	"qrcp_pass/util"
@@ -46,9 +49,17 @@ import (
 // var xport = "21346"
 
 func main() {
+	var send bool
+	ars := os.Args[1:]
+	if len(ars) == 0 {
+		ars = append(ars, "xxx")
+		send = true
+	} else {
+		send = false
+	}
+	payload, _ := payload.FromArgs(ars)
 
-	payload, _ := payload.FromArgs(os.Args[1:])
-	// fmt.Println(payload)
+	// log.Println(payload)
 	randomport := RangeRand(0, 40000)
 	xport := strconv.FormatInt(randomport, 10)
 	log.Println("Port is:", xport)
@@ -124,6 +135,93 @@ func main() {
 		http.ServeFile(w, r, app.Payload.Path)
 
 	})
+	outputdir := "/Users/cj/Downloads"
+	//outputdir static should be the current one
+	//receive file
+	http.HandleFunc("/upload/sea/", func(w http.ResponseWriter, r *http.Request) {
+
+		switch r.Method {
+		case "POST":
+			// defer waitgroup.Done()
+			filenames := util.ReadFilenames(outputdir)
+			reader, err := r.MultipartReader()
+			if err != nil {
+				log.Println("Upload failed", err)
+				app.Stopchannel <- true
+				return
+			}
+
+			transferedfiles := []string{}
+
+			for {
+				// waitgroup.Add(1)
+				part, err := reader.NextPart()
+				if err == io.EOF {
+					break
+				}
+				//filename is empty skip
+				if part.FileName() == "" {
+					continue
+				}
+				// n++
+				// waitgroup.Add(1)
+				//prepare destination filename
+				fileName := util.GetFileName(part.FileName(), filenames)
+
+				out, err := os.Create(filepath.Join(outputdir, fileName))
+				if err != nil {
+					log.Println("unable create file path", err)
+					app.Stopchannel <- true
+					return
+				}
+				defer out.Close()
+				//Add name info filename
+				filenames = append(filenames, fileName)
+
+				// log.Println("output filename is :", out.Name())
+
+				/*****************************************/
+				// waitgroup.Add(1)
+				//start read and write chunk
+				//create a buf
+
+				buf := make([]byte, 4096)
+				for {
+					//read a chunk
+					b, err := part.Read(buf)
+					if err != nil && err != io.EOF {
+						log.Println("can not read file into disk", err)
+						app.Stopchannel <- true
+						return
+					}
+					//this part already finished
+					if b == 0 {
+						break
+					}
+					//write into a chunk
+					if _, err := out.Write(buf[:b]); err != nil {
+						log.Println("can not write file into disk", err)
+						app.Stopchannel <- true
+						return
+					}
+
+				}
+				// go ReadBuff(&waitgroup, app, part, out)
+				transferedfiles = append(transferedfiles, out.Name())
+
+				//wait group problem
+				defer waitgroup.Done()
+				/*****************************************/
+
+			}
+			// defer waitgroup.Done()
+			// progressBar.FinishPrint("File transfer completed")
+			// app.Stopchannel <- true
+			//layui will call two request
+			// WriteResponse(http.StatusAccepted, nil, w)
+			WriteResponse(http.StatusAccepted, "get it", w)
+		}
+	})
 	//later change it to be self router
 	//load js,css static resources
 	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("public/assets/css/"))))
@@ -188,13 +286,52 @@ func main() {
 	app.Instance = httpserver
 
 	// qr.RenderString(sendurl)
+	if send {
+		app.Send(payload)
+	}
 
-	app.Send(payload)
 	xerr := app.Wait()
 	if xerr != nil {
 		log.Fatalln("error is :", xerr)
 	}
 
+}
+func ReadBuff(wg *sync.WaitGroup, s *server.Server, part *multipart.Part, out *os.File) {
+	defer wg.Done()
+	buf := make([]byte, 4096)
+	for {
+		//read a chunk
+		b, err := part.Read(buf)
+		if err != nil && err != io.EOF {
+			log.Println("can not read file into disk", err)
+			s.Stopchannel <- true
+			return
+		}
+		//this part already finished
+		if b == 0 {
+			break
+		}
+		//write into a chunk
+		if _, err := out.Write(buf[:b]); err != nil {
+			log.Println("can not write file into disk", err)
+			s.Stopchannel <- true
+			return
+		}
+
+	}
+}
+
+//WriteResponse is a function
+func WriteResponse(code int, jsonres interface{}, w http.ResponseWriter) {
+	b, err := json.Marshal(jsonres)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		w.Write(b)
+	}
 }
 
 // 打开系统默认浏览器

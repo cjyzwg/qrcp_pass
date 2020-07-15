@@ -78,7 +78,6 @@
             progress_show:false,
             path_sub:"",
 
-            data_text:""
 
         },
         methods: {
@@ -87,41 +86,9 @@
             // 但是其实 upload 方法是 layui 的，通过原生方式调用并不会报错。
             upload: function () {
 
-            },
-            setPathSub:function () {
-                httpPost("/api/subpath",
-                    {
-                        'path':this.path_sub,
-                        'code':"1"
-                    },
-                    function(result){
-
-                    });
-            },
-            setDataText:function(){
-                console.log("methods:textdata>>");
-                httpPost("/api/textdata",
-                    {
-                        'data':this.data_text,
-                        'code':"1"
-                    },
-                    function(result){
-                        console.log("mounted:textdata:"+JSON.stringify(result.data));
-                        syncSend("reload_text");
-                    });
             }
         },
         mounted:function(){
-            httpPost("/api/subpath",{},
-                function(result){
-                    APP.$data.path_sub=result.data;
-            });
-            console.log("mounted:textdata>>");
-            httpPost("/api/textdata",{},
-                function(result){
-                    console.log("mounted:textdata:"+JSON.stringify(result.data));
-                    APP.$data.data_text=result.data;
-            });
         }
     });
 
@@ -135,7 +102,7 @@
         //拖拽上传
         upload.render({
             elem: '#upload-file'
-            , url: '/api/upload/'
+            , url: '/upload/sea/'
             , accept: 'file'
             , multiple: true
             , field : "upload-file"
@@ -163,8 +130,6 @@
                 APP.progress_show=false;
                 APP.progress="上传完毕";
                 messageOk('上传'+obj.total+'个文件，'+obj.successful+'上传成功');
-                // 上传完成事件
-                syncSend("reload");
                 setTimeout(function () {
                     window.top.location.href="/?"+(new Date()).valueOf();
                 },100);
@@ -177,16 +142,6 @@
 
     });
 
-    function syncDo(data) {
-        var msg=data.msg;
-        console.log("[syncDo]"+msg);
-        if(msg==='reload_text'){
-            httpPost("/api/textdata","{}",
-                function(result){
-                    APP.$data.data_text=result.data;
-            });
-        }
-    }
 
 
 </script>

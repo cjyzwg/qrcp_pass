@@ -16,4 +16,5 @@ require (
 	github.com/sqs/goreturns v0.0.0-20181028201513-538ac6014518 // indirect
 	github.com/zserge/lorca v0.1.9
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
+	gopkg.in/cheggaaa/pb.v1 v1.0.28
 )

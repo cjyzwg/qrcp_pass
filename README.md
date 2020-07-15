@@ -22,3 +22,6 @@
 
     1、解决局域网iPhone、iOS、安卓、win7 mac跨平台共享文件  
     2、必须下载chrome浏览器
+
+## 3.工作
+![screenshot](demo.gif)

@@ -24,4 +24,4 @@
     2、必须下载chrome浏览器
 
 ## 3.工作
-![screenshot](demo.gif)
+![screenshot](./demo.gif)

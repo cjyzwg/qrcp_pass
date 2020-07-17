@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"qrcp_pass/payload"
 	"runtime"
 	"strconv"
@@ -24,6 +25,8 @@ type Server struct {
 	Payload                payload.Payload
 	ExpectParallelRequests bool
 	Port                   string
+	IsUpload               bool
+	Uploaddir              string
 }
 
 //Urlparms is a struct
@@ -39,19 +42,41 @@ func (s *Server) Send(p payload.Payload) {
 	s.ExpectParallelRequests = true
 }
 
+// Open 目录
+func Open(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start"}
+	case "darwin":
+		cmd = "open"
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+	}
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
+}
+
 // Wait for transfer to be completed, it waits forever if kept awlive
 func (s *Server) Wait() error {
 	s.Uistopchannel = make(chan bool)
 	<-s.Stopchannel
 	s.Uistopchannel <- true
-	//这里出错了
+	//check
 	if err := s.Instance.Shutdown(context.Background()); err != nil {
 		// fmt.Println("xxxxxxxxxxxx")
 		log.Println(err)
 	}
-	//这里出错了
+	//DeleteAfterTransfer
 	if s.Payload.DeleteAfterTransfer {
 		s.Payload.Delete()
+	}
+	//open upload folder
+	if s.IsUpload {
+		Open(s.Uploaddir)
 	}
 	return nil
 }

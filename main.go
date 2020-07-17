@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/big"
@@ -13,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"qrcp_pass/payload"
@@ -24,6 +25,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/c4milo/unpackit"
 	"github.com/zserge/lorca"
 )
 
@@ -47,10 +49,99 @@ import (
 // SIGTTIN	21,21,26	Stop	后台程序从终端中读取数据时触发
 // SIGTTOU	22,22,27	Stop	后台程序向终端中写数据时触发
 // var xport = "21346"
+//later change it to config.toml
+var (
+	downloadDir = "./download/"
+	uploadDir   = "./upload/"
+	gzurl       = "https://gitee.com/cjyzwg/qrcp_pass/raw/qrcp_static/static.tar.gz"
+	unpackDir   = "./"
+	defaultFile = "README.md"
+)
 
 func main() {
+	//first unpack file and check defaultfile can not be deleted
+	existed, _ := util.PathExists(downloadDir + defaultFile)
+	if existed == false {
+		url := gzurl
+		tempDir := unpackDir
+		res, err := http.Get(url)
+		if err != nil {
+			fmt.Println("this url is not existed", err)
+			panic(err)
+		}
+		_, xerr := unpackit.Unpack(res.Body, tempDir)
+		if xerr != nil {
+			fmt.Println("this decompress got wrong", xerr)
+			panic(xerr)
+		}
+		fmt.Println("unpack is ok now")
+	}
 
-	ars := os.Args[1:]
+	//second read download folder
+	// downloadfiles, err := ioutil.ReadDir(downloadDir)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// //only get one file
+	// fileExt := defaultFile
+	// for _, downloadfile := range downloadfiles {
+	// 	if downloadfile.Name() != defaultFile {
+	// 		fileExt = downloadfile.Name()
+	// 	}
+	// 	// log.Println(downloadfile.Name())
+	// }
+	//get data from standard input stream
+	input := bufio.NewScanner(os.Stdin)
+	var lastline string
+
+	fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
+	fmt.Printf("下载文件【1】:\n")
+	fmt.Printf("上传文件【2】:\n")
+	//only get one file
+	fileExt := defaultFile
+	// 逐行扫描
+	for input.Scan() {
+		line := input.Text()
+
+		//upload file check file is not needed
+		if line == "2" {
+			lastline = line
+			break
+		} else {
+
+			//download file need to check
+			downloadfiles, err := ioutil.ReadDir(downloadDir)
+			if err != nil {
+				panic(err)
+			}
+
+			for _, downloadfile := range downloadfiles {
+				if downloadfile.Name() != defaultFile {
+					fileExt = downloadfile.Name()
+				}
+			}
+			if strings.Index(strings.Replace(fileExt, " ", "", -1), "README.md") <= -1 {
+				//have another file then can break
+				lastline = line
+				break
+			} else {
+				//tell user you need to add file to the download folder
+				fmt.Printf("请先放要传输的文件放到download目录下:\n")
+				fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
+				fmt.Printf("下载文件【1】:\n")
+				fmt.Printf("上传文件【2】:\n")
+			}
+
+		}
+
+	}
+	downloadfileext := downloadDir + fileExt
+	var ars []string
+	ars = append(ars, downloadfileext)
+	// log.Println("ars is :", ars)
+
+	//before from args we use this
+	// ars := os.Args[1:]
 
 	// var send bool
 	// if len(ars) == 0 {
@@ -62,10 +153,18 @@ func main() {
 	payload, _ := payload.FromArgs(ars)
 
 	// log.Println(payload)
+	// return
 	randomport := RangeRand(0, 40000)
 	xport := strconv.FormatInt(randomport, 10)
 	log.Println("Port is:", xport)
 	app := &server.Server{}
+	if lastline == "2" {
+		app.IsUpload = true
+		app.Uploaddir = uploadDir
+		if runtime.GOOS == "windows" {
+			app.Uploaddir = strings.Replace(uploadDir, "/", "\\", -1)
+		}
+	}
 	// ip, _ := GetLocalIP()
 	ip, iperr := util.GetIp()
 	if iperr != nil {
@@ -106,7 +205,7 @@ func main() {
 	waitgroup.Add(1)
 	var initCookie sync.Once
 	http.HandleFunc("/send/sea/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("1111")
+		fmt.Println("downloading")
 		if cookie.Value == "" {
 			if !strings.HasPrefix(r.Header.Get("User-Agent"), "Mozilla") {
 				http.Error(w, "", http.StatusOK)
@@ -137,7 +236,8 @@ func main() {
 		http.ServeFile(w, r, app.Payload.Path)
 
 	})
-	outputdir := "/Users/cj/Downloads"
+	// outputdir := "/Users/cj/Downloads"
+	outputdir := uploadDir
 	//outputdir static should be the current one
 	//receive file
 	http.HandleFunc("/upload/sea/", func(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +371,7 @@ func main() {
 			//打开UI界面
 			app.ExecUI()
 		} else {
-			open(addr + ":" + port)
+			server.Open(addr + ":" + port)
 		}
 	}()
 
@@ -298,6 +398,8 @@ func main() {
 	}
 
 }
+
+//ReadBuff is a function
 func ReadBuff(wg *sync.WaitGroup, s *server.Server, part *multipart.Part, out *os.File) {
 	defer wg.Done()
 	buf := make([]byte, 4096)
@@ -337,24 +439,6 @@ func WriteResponse(code int, jsonres interface{}, w http.ResponseWriter) {
 }
 
 // 打开系统默认浏览器
-
-// 目录
-func open(url string) error {
-	var cmd string
-	var args []string
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default: // "linux", "freebsd", "openbsd", "netbsd"
-		cmd = "xdg-open"
-	}
-	args = append(args, url)
-	return exec.Command(cmd, args...).Start()
-}
 
 // GetSessionID returns a base64 encoded string of 40 random characters
 func GetSessionID() (string, error) {

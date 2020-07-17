@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jhoonb/archivex"
 )
@@ -15,7 +16,7 @@ type Payload struct {
 	DeleteAfterTransfer bool
 }
 
-// Delete is a function delete payload from a disk
+// Delete is a function delete payload absalute path from a disk
 func (p *Payload) Delete() error {
 	return os.RemoveAll(p.Path)
 }
@@ -40,6 +41,9 @@ func FromArgs(args []string) (Payload, error) {
 	// TODO: Research cleaner code
 	var content string
 	content = args[0]
+
+	//delet file except README.md
+	shouldzip = strings.Index(strings.Replace(content, " ", "", -1), "README.md") <= -1
 	return Payload{
 		Path:                content,
 		Filename:            filepath.Base(content),

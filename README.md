@@ -26,5 +26,11 @@
     1、解决局域网iPhone、iOS、安卓、win7 mac跨平台共享文件  
     2、有chrome浏览器最佳,如果没有的话会自动本机默认浏览器
 
-## 3.工作
+## 3. 操作步骤
+
+- ***操作步骤***
+
+    打开bash对应系统的目录，mac，linux下执行./install，windows 下双击install.exe即可
+
+## 4.工作
 ![screenshot](./demo.gif)

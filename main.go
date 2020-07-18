@@ -1,18 +1,22 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/big"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"qrcp_pass/payload"
 	"qrcp_pass/server"
 	"qrcp_pass/util"
@@ -21,7 +25,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/skip2/go-qrcode"
+	"github.com/c4milo/unpackit"
 	"github.com/zserge/lorca"
 )
 
@@ -45,26 +49,151 @@ import (
 // SIGTTIN	21,21,26	Stop	后台程序从终端中读取数据时触发
 // SIGTTOU	22,22,27	Stop	后台程序向终端中写数据时触发
 // var xport = "21346"
+//later change it to config.toml
+var (
+	downloadDir = "./download/"
+	uploadDir   = "./upload/"
+	gzurl       = "https://gitee.com/cjyzwg/qrcp_pass/raw/qrcp_static/static.tar.gz"
+	unpackDir   = "./"
+	defaultFile = "README.md"
+)
 
 func main() {
+	//first unpack file and check defaultfile can not be deleted
+	existed, _ := util.PathExists(downloadDir + defaultFile)
+	if existed == false {
+		url := gzurl
+		tempDir := unpackDir
+		res, err := http.Get(url)
+		if err != nil {
+			fmt.Println("this url is not existed", err)
+			panic(err)
+		}
+		_, xerr := unpackit.Unpack(res.Body, tempDir)
+		if xerr != nil {
+			fmt.Println("this decompress got wrong", xerr)
+			panic(xerr)
+		}
+		fmt.Println("unpack is ok now")
+	}
 
-	payload, _ := payload.FromArgs(os.Args[1:])
-	// fmt.Println(payload)
+	//second read download folder
+	// downloadfiles, err := ioutil.ReadDir(downloadDir)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// //only get one file
+	// fileExt := defaultFile
+	// for _, downloadfile := range downloadfiles {
+	// 	if downloadfile.Name() != defaultFile {
+	// 		fileExt = downloadfile.Name()
+	// 	}
+	// 	// log.Println(downloadfile.Name())
+	// }
+	//get data from standard input stream
+	input := bufio.NewScanner(os.Stdin)
+	var lastline string
+
+	fmt.Println(`************************************************************
+------------------------------------------------------------`)
+	fmt.Printf(` 
+	 $$$$$$\     $$$$$\                                         
+	$$  __$$\    \__$$ |                                        
+	$$ /  \__|      $$ | $$$$$$\   $$$$$$\   $$$$$$$\  $$$$$$$\ 
+	$$ |            $$ |$$  __$$\  \____$$\ $$  _____|$$  _____|
+	$$ |      $$\   $$ |$$ /  $$ | $$$$$$$ |\$$$$$$\  \$$$$$$\  
+	$$ |  $$\ $$ |  $$ |$$ |  $$ |$$  __$$ | \____$$\  \____$$\ 
+	\$$$$$$  |\$$$$$$  |$$$$$$$  |\$$$$$$$ |$$$$$$$  |$$$$$$$  |
+	 \______/  \______/ $$  ____/  \_______|\_______/ \_______/ 
+			    $$ |                                    
+			    $$ |                                    
+			    \__|                                    `)
+	fmt.Println("")
+	fmt.Println(`------------------------------------------------------------`)
+	fmt.Println(" 传输(CJPass) v0.0.1  手机电脑文件传输 made by cj")
+	fmt.Println(`------------------------------------------------------------
+************************************************************`)
+	fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
+	fmt.Printf("扫码传文件【1】:\n")
+	fmt.Printf("扫码收文件【2】:\n")
+	//only get one file
+	fileExt := defaultFile
+	// 逐行扫描
+	for input.Scan() {
+		line := input.Text()
+
+		//upload file check file is not needed
+		if line == "2" {
+			lastline = line
+			break
+		} else {
+
+			//download file need to check
+			downloadfiles, err := ioutil.ReadDir(downloadDir)
+			if err != nil {
+				panic(err)
+			}
+
+			for _, downloadfile := range downloadfiles {
+				if downloadfile.Name() != defaultFile {
+					fileExt = downloadfile.Name()
+				}
+			}
+			if strings.Index(strings.Replace(fileExt, " ", "", -1), "README.md") <= -1 {
+				//have another file then can break
+				lastline = line
+				break
+			} else {
+				//tell user you need to add file to the download folder
+				fmt.Printf("请先放要传输的文件放到download目录下:\n")
+				fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
+				fmt.Printf("传文件【1】:\n")
+				fmt.Printf("收文件【2】:\n")
+			}
+
+		}
+
+	}
+	downloadfileext := downloadDir + fileExt
+	var ars []string
+	ars = append(ars, downloadfileext)
+	// log.Println("ars is :", ars)
+
+	//before from args we use this
+	// ars := os.Args[1:]
+
+	// var send bool
+	// if len(ars) == 0 {
+	// 	ars = append(ars, "xxx")
+	// 	send = true
+	// } else {
+	// 	send = false
+	// }
+	payload, _ := payload.FromArgs(ars)
+
+	// log.Println(payload)
+	// return
 	randomport := RangeRand(0, 40000)
 	xport := strconv.FormatInt(randomport, 10)
 	log.Println("Port is:", xport)
 	app := &server.Server{}
+	if lastline == "2" {
+		app.IsUpload = true
+		app.Uploaddir = uploadDir
+		if runtime.GOOS == "windows" {
+			app.Uploaddir = strings.Replace(uploadDir, "/", "\\", -1)
+		}
+	}
 	// ip, _ := GetLocalIP()
-	ips, iperr := util.Ips()
+	ip, iperr := util.GetIp()
 	if iperr != nil {
 		panic(iperr)
 	}
-	if len(ips) == 0 {
+	if ip == "" {
 		fmt.Println("没有发现ip，请先连接网络再尝试")
 		return
 	}
-	ip := ips[0]
-	log.Println("Current ip is:", ip)
+
 	app.Port = xport
 	//优雅关闭
 	app.Stopchannel = make(chan bool)
@@ -83,12 +212,22 @@ func main() {
 	}
 	port := xport
 	newaddr := ip + ":" + port
+	log.Println("Current ip+port is:", newaddr)
 	sendurl := "http://" + newaddr + "/send/sea/"
+	receiveurl := "http://" + newaddr + "/upload"
+	urlparms := &server.Urlparms{
+		Sendip:     ip,
+		Sendurl:    sendurl,
+		Receiveurl: receiveurl,
+	}
+	if lastline == "2" {
+		urlparms.Checkupload = true
+	}
 	var waitgroup sync.WaitGroup
 	waitgroup.Add(1)
 	var initCookie sync.Once
 	http.HandleFunc("/send/sea/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("1111")
+		fmt.Println("downloading")
 		if cookie.Value == "" {
 			if !strings.HasPrefix(r.Header.Get("User-Agent"), "Mozilla") {
 				http.Error(w, "", http.StatusOK)
@@ -119,16 +258,113 @@ func main() {
 		http.ServeFile(w, r, app.Payload.Path)
 
 	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// outputdir := "/Users/cj/Downloads"
+	outputdir := uploadDir
+	//outputdir static should be the current one
+	//receive file
+	http.HandleFunc("/upload/sea/", func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Println("222")
-		f, err := qrcode.Encode(sendurl, qrcode.Highest, 300)
-		if err != nil {
-			log.Println(err.Error())
-			return
+		switch r.Method {
+		case "POST":
+			// defer waitgroup.Done()
+			filenames := util.ReadFilenames(outputdir)
+			reader, err := r.MultipartReader()
+			if err != nil {
+				log.Println("Upload failed", err)
+				app.Stopchannel <- true
+				return
+			}
+
+			transferedfiles := []string{}
+
+			for {
+				// waitgroup.Add(1)
+				part, err := reader.NextPart()
+				if err == io.EOF {
+					break
+				}
+				//filename is empty skip
+				if part.FileName() == "" {
+					continue
+				}
+				// n++
+				// waitgroup.Add(1)
+				//prepare destination filename
+				fileName := util.GetFileName(part.FileName(), filenames)
+
+				out, err := os.Create(filepath.Join(outputdir, fileName))
+				if err != nil {
+					log.Println("unable create file path", err)
+					app.Stopchannel <- true
+					return
+				}
+				defer out.Close()
+				//Add name info filename
+				filenames = append(filenames, fileName)
+
+				// log.Println("output filename is :", out.Name())
+
+				/*****************************************/
+				// waitgroup.Add(1)
+				//start read and write chunk
+				//create a buf
+
+				buf := make([]byte, 4096)
+				for {
+					//read a chunk
+					b, err := part.Read(buf)
+					if err != nil && err != io.EOF {
+						log.Println("can not read file into disk", err)
+						app.Stopchannel <- true
+						return
+					}
+					//this part already finished
+					if b == 0 {
+						break
+					}
+					//write into a chunk
+					if _, err := out.Write(buf[:b]); err != nil {
+						log.Println("can not write file into disk", err)
+						app.Stopchannel <- true
+						return
+					}
+
+				}
+				// go ReadBuff(&waitgroup, app, part, out)
+				transferedfiles = append(transferedfiles, out.Name())
+
+				//wait group problem
+				defer waitgroup.Done()
+				/*****************************************/
+
+			}
+			// defer waitgroup.Done()
+			// progressBar.FinishPrint("File transfer completed")
+			// app.Stopchannel <- true
+			//layui will call two request
+			// WriteResponse(http.StatusAccepted, nil, w)
+			WriteResponse(http.StatusAccepted, "get it", w)
 		}
-		w.Write(f)
 	})
+	//later change it to be self router
+	//load js,css static resources
+	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("public/assets/css/"))))
+	http.Handle("/static/js/", http.StripPrefix("/static/js/", http.FileServer(http.Dir("public/js/"))))
+	http.Handle("/static/js/libs/", http.StripPrefix("/static/js/libs/", http.FileServer(http.Dir("public/js/libs/"))))
+	http.Handle("/static/images/", http.StripPrefix("/static/images/", http.FileServer(http.Dir("public/assets/images/"))))
+	http.Handle("/static/fonts/", http.StripPrefix("/static/fonts/", http.FileServer(http.Dir("public/assets/fonts/"))))
+
+	//wait for index page
+	http.HandleFunc("/", urlparms.IndexTmpl)
+	//qrcode
+	http.HandleFunc("/qrcode", urlparms.QrcodeTmpl)
+	//upload
+	http.HandleFunc("/upload", urlparms.UploadTmpl)
+	//api sip get ip string
+	http.HandleFunc("/api/sip", urlparms.OnSip)
+	//layui demo
+	http.HandleFunc("/homelay", urlparms.LayDemoTmpl)
+
 	//wait for all wait done
 	go func() {
 		waitgroup.Wait()
@@ -157,7 +393,7 @@ func main() {
 			//打开UI界面
 			app.ExecUI()
 		} else {
-			open(addr + ":" + port)
+			server.Open(addr + ":" + port)
 		}
 	}()
 
@@ -174,7 +410,9 @@ func main() {
 	app.Instance = httpserver
 
 	// qr.RenderString(sendurl)
+	// if send {
 
+	// }
 	app.Send(payload)
 	xerr := app.Wait()
 	if xerr != nil {
@@ -183,25 +421,46 @@ func main() {
 
 }
 
-// 打开系统默认浏览器
+//ReadBuff is a function
+func ReadBuff(wg *sync.WaitGroup, s *server.Server, part *multipart.Part, out *os.File) {
+	defer wg.Done()
+	buf := make([]byte, 4096)
+	for {
+		//read a chunk
+		b, err := part.Read(buf)
+		if err != nil && err != io.EOF {
+			log.Println("can not read file into disk", err)
+			s.Stopchannel <- true
+			return
+		}
+		//this part already finished
+		if b == 0 {
+			break
+		}
+		//write into a chunk
+		if _, err := out.Write(buf[:b]); err != nil {
+			log.Println("can not write file into disk", err)
+			s.Stopchannel <- true
+			return
+		}
 
-// 目录
-func open(url string) error {
-	var cmd string
-	var args []string
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default: // "linux", "freebsd", "openbsd", "netbsd"
-		cmd = "xdg-open"
 	}
-	args = append(args, url)
-	return exec.Command(cmd, args...).Start()
 }
+
+//WriteResponse is a function
+func WriteResponse(code int, jsonres interface{}, w http.ResponseWriter) {
+	b, err := json.Marshal(jsonres)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		w.Write(b)
+	}
+}
+
+// 打开系统默认浏览器
 
 // GetSessionID returns a base64 encoded string of 40 random characters
 func GetSessionID() (string, error) {

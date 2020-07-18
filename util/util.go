@@ -1,8 +1,13 @@
 package util
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 //Ips 得到网卡名加ip
@@ -80,14 +85,62 @@ func GetIfaceIps() (map[string]string, error) {
 	return ips, nil
 }
 
-// func main() {
-// 	ips, err := Ips()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	if len(ips) == 0 {
-// 		fmt.Println("没有发现ip，请先连接网络再尝试")
-// 		return
-// 	}
-// 	fmt.Println(ips[0])
-// }
+//GetIp is a function
+func GetIp() (localip string, err error) {
+	ips, err := Ips()
+	if err != nil {
+		panic(err)
+	}
+	if len(ips) == 0 {
+		fmt.Println("没有发现ip，请先连接网络再尝试")
+		return "", err
+	}
+	initlocalip := ips[0]
+	return initlocalip, err
+}
+
+//ReadFilenames from dir
+func ReadFilenames(dir string) []string {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+	// Create array of names of files which are stored in dir
+	// used later to set valid name for received files
+	filenames := make([]string, len(files))
+	for _, fi := range files {
+		filenames = append(filenames, fi.Name())
+	}
+	return filenames
+}
+
+// GetFileName generates a file name based on the existing files in the directory
+// if name isn't taken leave it unchanged
+// else change name to format "name(number).ext"
+func GetFileName(newFilename string, fileNamesInTargetDir []string) string {
+	fileExt := filepath.Ext(newFilename)
+	fileName := strings.TrimSuffix(newFilename, fileExt)
+	number := 1
+	i := 0
+	for i < len(fileNamesInTargetDir) {
+		if newFilename == fileNamesInTargetDir[i] {
+			newFilename = fmt.Sprintf("%s(%v)%s", fileName, number, fileExt)
+			number++
+			i = 0
+		}
+		i++
+	}
+	return newFilename
+}
+
+//PathExists check file/folder exists
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}

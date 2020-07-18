@@ -94,9 +94,28 @@ func main() {
 	input := bufio.NewScanner(os.Stdin)
 	var lastline string
 
+	fmt.Println(`************************************************************
+------------------------------------------------------------`)
+	fmt.Printf(` 
+	 $$$$$$\     $$$$$\                                         
+	$$  __$$\    \__$$ |                                        
+	$$ /  \__|      $$ | $$$$$$\   $$$$$$\   $$$$$$$\  $$$$$$$\ 
+	$$ |            $$ |$$  __$$\  \____$$\ $$  _____|$$  _____|
+	$$ |      $$\   $$ |$$ /  $$ | $$$$$$$ |\$$$$$$\  \$$$$$$\  
+	$$ |  $$\ $$ |  $$ |$$ |  $$ |$$  __$$ | \____$$\  \____$$\ 
+	\$$$$$$  |\$$$$$$  |$$$$$$$  |\$$$$$$$ |$$$$$$$  |$$$$$$$  |
+	 \______/  \______/ $$  ____/  \_______|\_______/ \_______/ 
+			    $$ |                                    
+			    $$ |                                    
+			    \__|                                    `)
+	fmt.Println("")
+	fmt.Println(`------------------------------------------------------------`)
+	fmt.Println(" 传输(CJPass) v0.0.1  手机电脑文件传输 made by cj")
+	fmt.Println(`------------------------------------------------------------
+************************************************************`)
 	fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
-	fmt.Printf("下载文件【1】:\n")
-	fmt.Printf("上传文件【2】:\n")
+	fmt.Printf("扫码传文件【1】:\n")
+	fmt.Printf("扫码收文件【2】:\n")
 	//only get one file
 	fileExt := defaultFile
 	// 逐行扫描
@@ -128,8 +147,8 @@ func main() {
 				//tell user you need to add file to the download folder
 				fmt.Printf("请先放要传输的文件放到download目录下:\n")
 				fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
-				fmt.Printf("下载文件【1】:\n")
-				fmt.Printf("上传文件【2】:\n")
+				fmt.Printf("传文件【1】:\n")
+				fmt.Printf("收文件【2】:\n")
 			}
 
 		}
@@ -200,6 +219,9 @@ func main() {
 		Sendip:     ip,
 		Sendurl:    sendurl,
 		Receiveurl: receiveurl,
+	}
+	if lastline == "2" {
+		urlparms.Checkupload = true
 	}
 	var waitgroup sync.WaitGroup
 	waitgroup.Add(1)

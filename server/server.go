@@ -31,9 +31,10 @@ type Server struct {
 
 //Urlparms is a struct
 type Urlparms struct {
-	Sendip     string
-	Sendurl    string
-	Receiveurl string
+	Sendip      string
+	Sendurl     string
+	Receiveurl  string
+	Checkupload bool
 }
 
 // Send adds a handler for sending the file
@@ -133,11 +134,26 @@ func (s *Server) ExecUI() {
 
 //IndexTmpl is a function
 func (url *Urlparms) IndexTmpl(w http.ResponseWriter, r *http.Request) {
+
+	type IndexParms struct {
+		Path        string
+		Translation string
+	}
+
+	parms := &IndexParms{
+		Path:        "download",
+		Translation: "传文件",
+	}
+	if url.Checkupload {
+		parms.Path = "upload"
+		parms.Translation = "收文件"
+	}
+
 	t1, err := template.ParseFiles("template/index.html")
 	if err != nil {
 		panic(err)
 	}
-	t1.Execute(w, nil)
+	t1.Execute(w, parms)
 
 	// sendurl := url.Sendurl
 	// f, err := qrcode.Encode(sendurl, qrcode.Highest, 300)

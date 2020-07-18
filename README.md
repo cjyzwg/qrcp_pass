@@ -33,4 +33,5 @@
     打开bash对应系统的目录，mac，linux下执行./install，windows 下双击install.exe即可
 
 ## 4.工作
-![screenshot](./demo.gif)
+![扫码传文件](./download.gif)
+![扫码收文件](./upload.gif)

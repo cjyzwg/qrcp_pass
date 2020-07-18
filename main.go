@@ -118,6 +118,10 @@ func main() {
 	fmt.Printf("扫码收文件【2】:\n")
 	//only get one file
 	fileExt := defaultFile
+	opendownloaddir := downloadDir
+	if runtime.GOOS == "windows" {
+		opendownloaddir = strings.Replace(downloadDir, "/", "\\", -1)
+	}
 	// 逐行扫描
 	for input.Scan() {
 		line := input.Text()
@@ -144,8 +148,11 @@ func main() {
 				lastline = line
 				break
 			} else {
+				//open download folder
 				//tell user you need to add file to the download folder
-				fmt.Printf("请先放要传输的文件放到download目录下:\n")
+				server.Open(opendownloaddir)
+				fmt.Printf("已经打开" + downloadDir + "目录下:\n")
+				fmt.Printf("请先放要传输的文件放到" + downloadDir + "目录下:\n")
 				fmt.Printf("请选择以下哪种方式（输入1或2）:\n")
 				fmt.Printf("传文件【1】:\n")
 				fmt.Printf("收文件【2】:\n")

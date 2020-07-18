@@ -36,17 +36,14 @@
 		<div class="home-sub-menu">
 		<ul class="layui-nav layui-bg-orange" lay-filter="">
 			<li class="layui-nav-item">
-				<a onclick="x_admin_open('手机扫码','/qrcode?path=download', 250, 320)">
-					<i class="iconfont">&#xe6ec;</i>下载文件</a>
+				<a id="aid" onclick="x_admin_open('手机扫码','/qrcode?path={{.Path}}', 250, 320)">
+					<i class="iconfont">&#xe6ec;</i>{{.Translation}}</a>
 			</li>
-			<li class="layui-nav-item">
-                <!-- <a href="/upload" target="iframe">
-					<i class="iconfont">&#xe6ec;</i>上传文件
-				</a> -->
+			<!-- <li class="layui-nav-item">
 				<a onclick="x_admin_open('手机扫码','/qrcode?path=upload', 250, 320)">
 					<i class="layui-icon">&#xe655;</i>上传文件
 				</a>
-			</li>
+			</li> -->
 
 		</ul>
 		</div>
@@ -69,4 +66,11 @@
 <script type="text/javascript" src="/static/js/libs/jquery.min.js"></script>
 <script type="text/javascript" src="/static/js/libs/layui/layui.js"></script>
 <script type="text/javascript" src="/static/js/main.js"></script>
+<script>
+	$(document).ready(function() {
+		setTimeout(function(){
+			$("#aid").click();
+		},600);
+	})
+</script>
 </html>

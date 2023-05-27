@@ -1,4 +1,4 @@
-module qrcp
+module qrcp_pass
 
 go 1.20
 

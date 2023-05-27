@@ -77,19 +77,6 @@ func main() {
 		fmt.Println("unpack is ok now")
 	}
 
-	//second read download folder
-	// downloadfiles, err := ioutil.ReadDir(downloadDir)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// //only get one file
-	// fileExt := defaultFile
-	// for _, downloadfile := range downloadfiles {
-	// 	if downloadfile.Name() != defaultFile {
-	// 		fileExt = downloadfile.Name()
-	// 	}
-	// 	// log.Println(downloadfile.Name())
-	// }
 	//get data from standard input stream
 	input := bufio.NewScanner(os.Stdin)
 	var lastline string

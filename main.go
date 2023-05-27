@@ -49,7 +49,7 @@ import (
 // SIGTTIN	21,21,26	Stop	后台程序从终端中读取数据时触发
 // SIGTTOU	22,22,27	Stop	后台程序向终端中写数据时触发
 // var xport = "21346"
-//later change it to config.toml
+// later change it to config.toml
 var (
 	downloadDir = "./download/"
 	uploadDir   = "./upload/"
@@ -61,7 +61,7 @@ var (
 func main() {
 	//first unpack file and check defaultfile can not be deleted
 	existed, _ := util.PathExists(downloadDir + defaultFile)
-	if existed == false {
+	if !existed {
 		url := gzurl
 		tempDir := unpackDir
 		res, err := http.Get(url)
@@ -69,7 +69,7 @@ func main() {
 			fmt.Println("this url is not existed", err)
 			panic(err)
 		}
-		_, xerr := unpackit.Unpack(res.Body, tempDir)
+		xerr := unpackit.Unpack(res.Body, tempDir)
 		if xerr != nil {
 			fmt.Println("this decompress got wrong", xerr)
 			panic(xerr)
@@ -146,6 +146,7 @@ func main() {
 			if strings.Index(strings.Replace(fileExt, " ", "", -1), "README.md") <= -1 {
 				//have another file then can break
 				lastline = line
+				fmt.Printf("文件后缀名为:" + fileExt + ",开始打开网页:\n")
 				break
 			} else {
 				//open download folder
@@ -202,21 +203,12 @@ func main() {
 	}
 
 	app.Port = xport
-	//优雅关闭
+	//优雅关闭,非nil，初始化不会引发panic
 	app.Stopchannel = make(chan bool)
-	app.Uistopchannel = make(chan bool)
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
+	app.AutoCloseUi = make(chan int)
+	app.Signalchannel = make(chan os.Signal)
+	signal.Notify(app.Signalchannel, os.Interrupt)
 
-	go func() {
-		<-sig
-		app.Stopchannel <- true
-	}()
-	// Create cookie used to verify request is coming from first client to connect
-	cookie := &http.Cookie{
-		Name:  "qrcp",
-		Value: "",
-	}
 	port := xport
 	newaddr := ip + ":" + port
 	log.Println("Current ip+port is:", newaddr)
@@ -230,39 +222,10 @@ func main() {
 	if lastline == "2" {
 		urlparms.Checkupload = true
 	}
-	var waitgroup sync.WaitGroup
-	waitgroup.Add(1)
-	var initCookie sync.Once
 	http.HandleFunc("/send/sea/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("downloading")
-		if cookie.Value == "" {
-			if !strings.HasPrefix(r.Header.Get("User-Agent"), "Mozilla") {
-				http.Error(w, "", http.StatusOK)
-				return
-			}
-			initCookie.Do(func() {
-				value, err := GetSessionID()
-				if err != nil {
-					log.Print("unable to get sessionid", err)
-					app.Stopchannel <- true
-					return
-				}
-				cookie.Value = value
-				http.SetCookie(w, cookie)
-			})
-		} else {
-			rcookie, err := r.Cookie(cookie.Name)
-			if err != nil || rcookie.Value != cookie.Value {
-				http.Error(w, "", http.StatusNotFound)
-				return
-			}
-			// if cookie exists and add
-			waitgroup.Add(1)
-		}
-		//remove connnection when waitgroup done
-		defer waitgroup.Done()
-		w.Header().Set("Content-Disposition", "attachment; filename="+app.Payload.Filename)
-		http.ServeFile(w, r, app.Payload.Path)
+
+		app.DownloadHandler(w, r)
 
 	})
 	// outputdir := "/Users/cj/Downloads"
@@ -341,7 +304,7 @@ func main() {
 				transferedfiles = append(transferedfiles, out.Name())
 
 				//wait group problem
-				defer waitgroup.Done()
+				// defer waitgroup.Done()
 				/*****************************************/
 
 			}
@@ -372,63 +335,30 @@ func main() {
 	//layui demo
 	http.HandleFunc("/homelay", urlparms.LayDemoTmpl)
 
-	//wait for all wait done
-	go func() {
-		waitgroup.Wait()
-		app.Stopchannel <- true
-	}()
-
-	httpserver := &http.Server{Addr: ":" + port}
-	// listener, err := net.Listen("tcp", newaddr)
-	// if err != nil {
-	// 	log.Fatalln("error get ")
-	// }
-	//go open 必须在有网的情况下才能调取成功
-	addr := "http://127.0.0.1"
-	go func() {
-
-		// open(addr + ":" + port)
-		if err := httpserver.ListenAndServe(); err != nil {
-			// cannot panic, because this probably is an intentional close
-			log.Printf("Httpserver: ListenAndServe() error: %s", err)
-		}
-	}()
-
 	go func() {
 		ChromeExe := lorca.ChromeExecutable()
 		if ChromeExe != "" {
 			//打开UI界面
 			app.ExecUI()
 		} else {
+			addr := "http://127.0.0.1"
 			server.Open(addr + ":" + port)
 		}
 	}()
-
-	// go func() {
-	// 	if err := httpserver.ListenAndServe(); err != nil {
-	// 		// cannot panic, because this probably is an intentional close
-	// 		log.Printf("Httpserver: ListenAndServe() error: %s", err)
-	// 	}
-	// 	// if err := (httpserver.Serve(server.TcpKeepAliveListener{listener.(*net.TCPListener)})); err != http.ErrServerClosed {
-	// 	// 	log.Fatalln(err)
-	// 	// }
-	// }()
+	httpserver := &http.Server{Addr: ":" + port}
 
 	app.Instance = httpserver
 
-	// qr.RenderString(sendurl)
-	// if send {
-
-	// }
 	app.Send(payload)
-	xerr := app.Wait()
-	if xerr != nil {
-		log.Fatalln("error is :", xerr)
+	go app.Wait()
+
+	if err := httpserver.ListenAndServe(); err != nil {
+		log.Printf("Httpserver: ListenAndServe() error: %s", err)
 	}
 
 }
 
-//ReadBuff is a function
+// ReadBuff is a function
 func ReadBuff(wg *sync.WaitGroup, s *server.Server, part *multipart.Part, out *os.File) {
 	defer wg.Done()
 	buf := make([]byte, 4096)
@@ -454,7 +384,7 @@ func ReadBuff(wg *sync.WaitGroup, s *server.Server, part *multipart.Part, out *o
 	}
 }
 
-//WriteResponse is a function
+// WriteResponse is a function
 func WriteResponse(code int, jsonres interface{}, w http.ResponseWriter) {
 	b, err := json.Marshal(jsonres)
 	if err != nil {
@@ -478,7 +408,7 @@ func GetSessionID() (string, error) {
 	return base64.StdEncoding.EncodeToString(randbytes), nil
 }
 
-//GetLocalIP is a function
+// GetLocalIP is a function
 func GetLocalIP() (ipv4 string, err error) {
 	var (
 		addrs   []net.Addr
@@ -503,7 +433,7 @@ func GetLocalIP() (ipv4 string, err error) {
 	return "", nil
 }
 
-//RangeRand 生成区间[-m, n]的安全随机数
+// RangeRand 生成区间[-m, n]的安全随机数
 func RangeRand(min, max int64) int64 {
 	if min > max {
 		panic("the min is greater than max!")

@@ -9,7 +9,7 @@ import (
 	"github.com/jhoonb/archivex"
 )
 
-//Payload is a struct
+// Payload is a struct
 type Payload struct {
 	Filename            string
 	Path                string
@@ -44,6 +44,7 @@ func FromArgs(args []string) (Payload, error) {
 
 	//delet file except README.md
 	shouldzip = strings.Index(strings.Replace(content, " ", "", -1), "README.md") <= -1
+	// log.Println(shouldzip)
 	return Payload{
 		Path:                content,
 		Filename:            filepath.Base(content),

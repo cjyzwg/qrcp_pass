@@ -1,3 +1,5 @@
 **/download/*
 !**/download/README.md
 upload/
+.idea/
+.vscode/
